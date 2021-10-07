@@ -68,12 +68,6 @@ function replaceAllLinks() {
       // get the text, as displayed
       var urlText = link.element.getText().slice(start, end + 1);
 
-      console.log("urlText: " + urlText);
-      console.log("link.url: " + link.url);
-      console.log("permalink: " + permalink);
-      console.log("start: " + start);
-      console.log("end: " + end);
-      console.log("last character: " + urlText.slice(urlText.length - 1));
       if (isUrl(urlText)) {
         // if the displayed text appears to be a URL (ie it starts with 'http'), replace the displayed text and the link URL with the permalink
         link.element.deleteText(start, end);
@@ -136,11 +130,14 @@ function appendFootnoteLinks() {
               );
           }
 
+          // add permalink in brackets
           var oldLength = paragraph.getText().length;
           paragraph.appendText(` [${permalink}]`);
           var newLength = paragraph.getText().length;
 
+          // format properly
           paragraph.editAsText().setItalic(oldLength, newLength - 1, false);
+          paragraph.editAsText().setLinkUrl(oldLength, newLength - 1, "");
           paragraph
             .editAsText()
             .setLinkUrl(oldLength + 2, newLength - 2, permalink);
