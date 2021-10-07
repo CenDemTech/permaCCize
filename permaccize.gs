@@ -1,24 +1,9 @@
-function makePermalinks() {
-  // makes all links in the document into perma.cc links
+function replaceAllLinks() {
+  // replaces all links in the document with perma.cc links
 
-  // ask for the perma.cc API key
+  api_key = promptForKey();
+
   var ui = DocumentApp.getUi();
-
-  var result = ui.prompt(
-    "Please enter your Perma.cc API key:",
-    ui.ButtonSet.OK_CANCEL
-  );
-
-  var button = result.getSelectedButton();
-  var api_key = result.getResponseText();
-  if (
-    button == ui.Button.CANCEL ||
-    button == ui.Button.CLOSE ||
-    api_key.length == 0
-  ) {
-    ui.alert("I can't run without an API key.");
-    return;
-  }
 
   var doc = DocumentApp.getActiveDocument();
 
@@ -63,7 +48,7 @@ function makePermalinks() {
     var link = links[l];
 
     // only replace the link if it's not already a permalink
-    if (link.url.includes("perma.cc") == false) {
+    if (!link.url.includes("perma.cc")) {
       // if the link has already been permalinked on this run of the script (because it shows up twice), just use that
       if (link.url in permalinks) {
         var permalink = permalinks[link.url];
@@ -71,7 +56,7 @@ function makePermalinks() {
 
       // otherwise make a permalink...
       else {
-        var permalink = makeFakePermalink(link.url, api_key);
+        var permalink = makePermalink(link.url, api_key);
         // ...and add it to the permalinks object in case it shows up again in the doc
         permalinks[link.url] = permalink;
       }
@@ -100,6 +85,91 @@ function makePermalinks() {
       }
     }
   }
+}
+
+function appendFootnoteLinks() {
+  // append perma.cc links to paragraphs in footnotes that have only one link
+
+  api_key = promptForKey();
+
+  var doc = DocumentApp.getActiveDocument();
+
+  // initialize arrays for all of the links in the footnotes, and all the permalinks we are about to make
+  var links = [];
+  var permalinks = {};
+
+  var footnotes = doc.getFootnotes();
+  for (var f = 0; f < footnotes.length; f++) {
+    paragraphs = footnotes[f].getFootnoteContents().getParagraphs();
+
+    // within each footnote, loop over the paragraphs
+    for (var p = 0; p < paragraphs.length; p++) {
+      paragraph = paragraphs[p];
+      paragraphLinks = getAllLinks(paragraph);
+
+      // only act on paragraphs that have a single link
+      if (paragraphLinks.length == 1) {
+        link = paragraphLinks[0];
+        // only replace the link if it's not already a permalink
+        if (!link.url.includes("perma.cc")) {
+          // if the link has already been permalinked on this run of the script (because it shows up twice), just use that
+          if (link.url in permalinks) {
+            var permalink = permalinks[link.url];
+          }
+
+          // otherwise make a permalink...
+          else {
+            var permalink = makePermalink(link.url, api_key);
+            // ...and add it to the permalinks object in case it shows up again in the doc
+            permalinks[link.url] = permalink;
+          }
+
+          // ... and append the link to the footnote
+
+          // eliminate trailing spaces
+          while (paragraph.getText().endsWith(" ")) {
+            paragraph
+              .editAsText()
+              .deleteText(
+                paragraph.getText().length - 1,
+                paragraph.getText().length - 1
+              );
+          }
+
+          var oldLength = paragraph.getText().length;
+          paragraph.appendText(` [${permalink}]`);
+          var newLength = paragraph.getText().length;
+
+          paragraph.editAsText().setItalic(oldLength, newLength - 1, false);
+          paragraph
+            .editAsText()
+            .setLinkUrl(oldLength + 2, newLength - 2, permalink);
+        }
+      }
+    }
+  }
+}
+
+function promptForKey() {
+  // ask for the perma.cc API key
+  var ui = DocumentApp.getUi();
+
+  var result = ui.prompt(
+    "Please enter your Perma.cc API key:",
+    ui.ButtonSet.OK_CANCEL
+  );
+
+  var button = result.getSelectedButton();
+  var api_key = result.getResponseText();
+  if (
+    button == ui.Button.CANCEL ||
+    button == ui.Button.CLOSE ||
+    api_key.length == 0
+  ) {
+    ui.alert("I can't run without an API key.");
+    return;
+  }
+  return api_key;
 }
 
 function isUrl(string) {
@@ -205,6 +275,7 @@ function onOpen() {
   // Add a menu including this link
   DocumentApp.getUi()
     .createMenu("Utils")
-    .addItem("Convert links to Perma.cc links", "makePermalinks")
+    .addItem("Replace all links with Perma.cc", "replaceAllLinks")
+    .addItem("Append footnote links with Perma.cc", "appendFootnoteLinks")
     .addToUi();
 }
