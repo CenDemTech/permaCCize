@@ -132,7 +132,7 @@ function appendFootnoteLinks() {
 
           // add permalink in brackets
           var oldLength = paragraph.getText().length;
-          paragraph.appendText(` [${permalink}]`);
+          paragraph.appendText(` [${permalink.replace("https://", "")}]`);
           var newLength = paragraph.getText().length;
 
           // format properly
@@ -199,7 +199,7 @@ function makePermalink(url, api_key) {
 
 function makeFakePermalink(url, api_key) {
   //  random response (for debugging, without making a real link)
-  var permalink = "http://perma.cc/"
+  var permalink = "https://perma.cc/"
     .concat(url)
     .concat(String(Math.round(Math.random() * 1000)).padStart(3, "0"));
 
