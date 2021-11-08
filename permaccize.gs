@@ -271,8 +271,11 @@ function getAllLinks(element) {
 function onOpen() {
   // Add a menu including this link
   DocumentApp.getUi()
-    .createMenu("Utils")
-    .addItem("Replace all links with Perma.cc", "replaceAllLinks")
-    .addItem("Append footnote links with Perma.cc", "appendFootnoteLinks")
+    .createMenu("Perma.cc")
+    .addItem("Replace all links with Perma.cc links", "replaceAllLinks")
+    .addItem(
+      "Append footnote links with bracketed Perma.cc links",
+      "appendFootnoteLinks"
+    )
     .addToUi();
 }
