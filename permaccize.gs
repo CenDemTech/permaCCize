@@ -163,8 +163,7 @@ function promptForKey() {
     button == ui.Button.CLOSE ||
     api_key.length == 0
   ) {
-    ui.alert("I can't run without an API key.");
-    return;
+    throw "Script cannot be run without an API key.";
   }
   return api_key;
 }
