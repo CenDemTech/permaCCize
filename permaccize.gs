@@ -81,9 +81,8 @@ function replaceAllLinks() {
   }
 }
 
-function appendFootnoteLinks() {
+function appendFootnoteLinks(bluebook = false) {
   // append perma.cc links to paragraphs in footnotes that have only one link
-
   api_key = promptForKey();
 
   var doc = DocumentApp.getActiveDocument();
@@ -130,17 +129,39 @@ function appendFootnoteLinks() {
               );
           }
 
+          // eliminate trailing period(s) (Bluebook only)
+          if (bluebook) {
+            while (paragraph.getText().endsWith(".")) {
+              paragraph
+                .editAsText()
+                .deleteText(
+                  paragraph.getText().length - 1,
+                  paragraph.getText().length - 1
+                );
+            }
+          }
+
           // add permalink in brackets
           var oldLength = paragraph.getText().length;
-          paragraph.appendText(` [${permalink.replace("https://", "")}]`);
+          if (bluebook) {
+            paragraph.appendText(` [${permalink}].`);
+          } else {
+            paragraph.appendText(` [${permalink.replace("https://", "")}]`);
+          }
           var newLength = paragraph.getText().length;
+
+          if (bluebook) {
+            linkUrlOffset = 3;
+          } else {
+            linkUrlOffset = 2;
+          }
 
           // format properly
           paragraph.editAsText().setItalic(oldLength, newLength - 1, false);
           paragraph.editAsText().setLinkUrl(oldLength, newLength - 1, "");
           paragraph
             .editAsText()
-            .setLinkUrl(oldLength + 2, newLength - 2, permalink);
+            .setLinkUrl(oldLength + 2, newLength - linkUrlOffset, permalink);
         }
       }
     }
@@ -203,6 +224,10 @@ function makeFakePermalink(url, api_key) {
     .concat(String(Math.round(Math.random() * 1000)).padStart(3, "0"));
 
   return permalink;
+}
+
+function appendFootnoteLinksBluebook() {
+  appendFootnoteLinks((bluebook = true));
 }
 
 /**
@@ -275,6 +300,10 @@ function onOpen() {
     .addItem(
       "Append footnote links with bracketed Perma.cc links",
       "appendFootnoteLinks"
+    )
+    .addItem(
+      "Append footnote links with bracketed Perma.cc links (Bluebook)",
+      "appendFootnoteLinksBluebook"
     )
     .addToUi();
 }
