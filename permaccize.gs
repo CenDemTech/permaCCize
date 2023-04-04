@@ -81,46 +81,46 @@ function replaceAllLinks() {
   }
 }
 
-function appendFootnoteLinks(bluebook = false) {
-  // append perma.cc links to paragraphs in footnotes that have only one link
-  api_key = promptForKey();
-
-  var doc = DocumentApp.getActiveDocument();
-
-  // initialize arrays for all of the links in the footnotes, and all the permalinks we are about to make
+function appendLinksToParagraphs(paragraphs, api_key, bluebook) {
   var links = [];
   var permalinks = {};
 
-  var footnotes = doc.getFootnotes();
-  for (var f = 0; f < footnotes.length; f++) {
-    paragraphs = footnotes[f].getFootnoteContents().getParagraphs();
+  for (var p = 0; p < paragraphs.length; p++) {
+    paragraph = paragraphs[p];
+    paragraphLinks = getAllLinks(paragraph);
 
-    // within each footnote, loop over the paragraphs
-    for (var p = 0; p < paragraphs.length; p++) {
-      paragraph = paragraphs[p];
-      paragraphLinks = getAllLinks(paragraph);
+    // only act on paragraphs that have a single link
+    if (paragraphLinks.length == 1) {
+      link = paragraphLinks[0];
+      // only replace the link if it's not already a permalink
+      if (!link.url.includes("perma.cc")) {
+        // if the link has already been permalinked on this run of the script (because it shows up twice), just use that
+        if (link.url in permalinks) {
+          var permalink = permalinks[link.url];
+        }
 
-      // only act on paragraphs that have a single link
-      if (paragraphLinks.length == 1) {
-        link = paragraphLinks[0];
-        // only replace the link if it's not already a permalink
-        if (!link.url.includes("perma.cc")) {
-          // if the link has already been permalinked on this run of the script (because it shows up twice), just use that
-          if (link.url in permalinks) {
-            var permalink = permalinks[link.url];
-          }
+        // otherwise make a permalink...
+        else {
+          var permalink = makePermalink(link.url, api_key);
+          // ...and add it to the permalinks object in case it shows up again in the doc
+          permalinks[link.url] = permalink;
+        }
 
-          // otherwise make a permalink...
-          else {
-            var permalink = makePermalink(link.url, api_key);
-            // ...and add it to the permalinks object in case it shows up again in the doc
-            permalinks[link.url] = permalink;
-          }
+        // ... and append the link to the footnote
 
-          // ... and append the link to the footnote
+        // eliminate trailing spaces
+        while (paragraph.getText().endsWith(" ")) {
+          paragraph
+            .editAsText()
+            .deleteText(
+              paragraph.getText().length - 1,
+              paragraph.getText().length - 1
+            );
+        }
 
-          // eliminate trailing spaces
-          while (paragraph.getText().endsWith(" ")) {
+        // eliminate trailing period(s) (Bluebook only)
+        if (bluebook) {
+          while (paragraph.getText().endsWith(".")) {
             paragraph
               .editAsText()
               .deleteText(
@@ -128,43 +128,44 @@ function appendFootnoteLinks(bluebook = false) {
                 paragraph.getText().length - 1
               );
           }
-
-          // eliminate trailing period(s) (Bluebook only)
-          if (bluebook) {
-            while (paragraph.getText().endsWith(".")) {
-              paragraph
-                .editAsText()
-                .deleteText(
-                  paragraph.getText().length - 1,
-                  paragraph.getText().length - 1
-                );
-            }
-          }
-
-          // add permalink in brackets
-          var oldLength = paragraph.getText().length;
-          if (bluebook) {
-            paragraph.appendText(` [${permalink}].`);
-          } else {
-            paragraph.appendText(` [${permalink.replace("https://", "")}]`);
-          }
-          var newLength = paragraph.getText().length;
-
-          if (bluebook) {
-            linkUrlOffset = 3;
-          } else {
-            linkUrlOffset = 2;
-          }
-
-          // format properly
-          paragraph.editAsText().setItalic(oldLength, newLength - 1, false);
-          paragraph.editAsText().setLinkUrl(oldLength, newLength - 1, "");
-          paragraph
-            .editAsText()
-            .setLinkUrl(oldLength + 2, newLength - linkUrlOffset, permalink);
         }
+
+        // add permalink in brackets
+        var oldLength = paragraph.getText().length;
+        if (bluebook) {
+          paragraph.appendText(` [${permalink}].`);
+        } else {
+          paragraph.appendText(` [${permalink.replace("https://", "")}]`);
+        }
+        var newLength = paragraph.getText().length;
+
+        if (bluebook) {
+          linkUrlOffset = 3;
+        } else {
+          linkUrlOffset = 2;
+        }
+
+        // format properly
+        paragraph.editAsText().setItalic(oldLength, newLength - 1, false);
+        paragraph.editAsText().setLinkUrl(oldLength, newLength - 1, "");
+        paragraph
+          .editAsText()
+          .setLinkUrl(oldLength + 2, newLength - linkUrlOffset, permalink);
       }
     }
+  }
+}
+
+function appendFootnoteLinks(bluebook = false) {
+  // append perma.cc links to paragraphs in footnotes that have only one link
+  api_key = promptForKey();
+
+  var doc = DocumentApp.getActiveDocument();
+
+  var footnotes = doc.getFootnotes();
+  for (var f = 0; f < footnotes.length; f++) {
+    paragraphs = footnotes[f].getFootnoteContents().getParagraphs();
+    appendLinksToParagraphs(paragraphs, api_key, bluebook)
   }
 }
 
@@ -292,11 +293,30 @@ function getAllLinks(element) {
   return links;
 }
 
+function appendAllLinks() {
+  var api_key = promptForKey();
+
+  // Get the active document and its body
+  var doc = DocumentApp.getActiveDocument();
+  var body = doc.getBody();
+
+  var links = [];
+  var permalinks = {};
+  
+  // Get all paragraphs in the document
+  var paragraphs = body.getParagraphs();
+  appendLinksToParagraphs(paragraphs, api_key, false)
+}
+
 function onOpen() {
   // Add a menu including this link
   DocumentApp.getUi()
     .createMenu("Perma.cc")
     .addItem("Replace all links with Perma.cc links", "replaceAllLinks")
+    .addItem(
+      "Append all links with bracketed Perma.cc links",
+      "appendAllLinks"
+      )
     .addItem(
       "Append footnote links with bracketed Perma.cc links",
       "appendFootnoteLinks"
