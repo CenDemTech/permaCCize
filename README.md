@@ -7,4 +7,4 @@ This is a Google Apps Script that can be used to add [Perma.cc](https://perma.cc
 
 You'll need a Perma.cc API key.
 
-Installation and use instructions to come.
+Instructions for use are [here](https://docs.google.com/document/d/1D88BRa1P2TyUX_zm9AYfnkuU9TN6VhJivHR73wuHdj4/edit#heading=h.t4x8k4k71ymv).
