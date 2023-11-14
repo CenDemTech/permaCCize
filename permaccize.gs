@@ -81,7 +81,7 @@ function replaceAllLinks() {
   }
 }
 
-function appendLinksToParagraphs(paragraphs, api_key, bluebook) {
+function appendLinksToText(paragraphs, api_key, bluebook) {
   var links = [];
   var permalinks = {};
 
@@ -163,10 +163,12 @@ function appendFootnoteLinks(bluebook = false) {
   var doc = DocumentApp.getActiveDocument();
 
   var footnotes = doc.getFootnotes();
+  var paragraphs = []
   for (var f = 0; f < footnotes.length; f++) {
-    paragraphs = footnotes[f].getFootnoteContents().getParagraphs();
-    appendLinksToParagraphs(paragraphs, api_key, bluebook)
+    paragraphs = paragraphs.concat(footnotes[f].getFootnoteContents().getParagraphs());
   }
+  appendLinksToText(paragraphs, api_key, bluebook)
+
 }
 
 function promptForKey() {
@@ -293,7 +295,7 @@ function getAllLinks(element) {
   return links;
 }
 
-function appendAllLinks() {
+function appendBibliographyLinks() {
   var api_key = promptForKey();
 
   // Get the active document and its body
@@ -305,7 +307,7 @@ function appendAllLinks() {
   
   // Get all paragraphs in the document
   var paragraphs = body.getParagraphs();
-  appendLinksToParagraphs(paragraphs, api_key, false)
+  appendLinksToText(paragraphs, api_key, false)
 }
 
 function onOpen() {
@@ -314,8 +316,8 @@ function onOpen() {
     .createMenu("Perma.cc")
     .addItem("Replace all links with Perma.cc links", "replaceAllLinks")
     .addItem(
-      "Append all links with bracketed Perma.cc links",
-      "appendAllLinks"
+      "Append all links with bracketed Perma.cc links (bibliography)",
+      "appendBibliographyLinks"
       )
     .addItem(
       "Append footnote links with bracketed Perma.cc links",
