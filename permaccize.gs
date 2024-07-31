@@ -1,3 +1,4 @@
+const kErrorCode400 = "errorCode400"
 function replaceAllLinks() {
   // replaces all links in the document with perma.cc links
 
@@ -46,7 +47,7 @@ function replaceAllLinks() {
   // loop over links
   for (var l = 0; l < links.length; l++) {
     var link = links[l];
-
+    var permalinkError = false
     // only replace the link if it's not already a permalink
     if (!link.url.includes("perma.cc")) {
       // if the link has already been permalinked on this run of the script (because it shows up twice), just use that
@@ -57,13 +58,22 @@ function replaceAllLinks() {
       // otherwise make a permalink...
       else {
         var permalink = makePermalink(link.url, api_key);
-        // ...and add it to the permalinks object in case it shows up again in the doc
-        permalinks[link.url] = permalink;
+        if (permalink != kErrorCode400) {
+          // ...and add it to the permalinks object in case it shows up again in the doc
+          permalinks[link.url] = permalink;
+        } else {
+          permalinkError = true
+        }
       }
 
       // find the start and end location for the text we are about to edit
       var start = link.startOffset;
       var end = link.endOffsetInclusive; // TODO: this needs another +1 when the element ends with a linebreak. regardless of whether it's a URL or not. tricky!
+
+      if (permalinkError == true) {
+        link.element.setForegroundColor(start, end+1, '#FF0000')
+        continue
+      }
 
       // get the text, as displayed
       var urlText = link.element.getText().slice(start, end + 1);
@@ -89,6 +99,8 @@ function appendLinksToText(paragraphs, api_key, bluebook) {
     paragraph = paragraphs[p];
     paragraphLinks = getAllLinks(paragraph);
 
+    var permalinkError = false
+
     // only act on paragraphs that have a single link
     if (paragraphLinks.length == 1) {
       link = paragraphLinks[0];
@@ -99,14 +111,24 @@ function appendLinksToText(paragraphs, api_key, bluebook) {
           var permalink = permalinks[link.url];
         }
 
-        // otherwise make a permalink...
+        // otherwise make a permalink
         else {
-          var permalink = makePermalink(link.url, api_key);
           // ...and add it to the permalinks object in case it shows up again in the doc
-          permalinks[link.url] = permalink;
+          var permalink = makePermalink(link.url, api_key);
+          if (permalink != kErrorCode400) {
+            permalinks[link.url] = permalink;
+          } else {
+            permalinkError = true
+          }
         }
 
-        // ... and append the link to the footnote
+        // if there's an error, make the text red and keep going.
+        if (permalinkError == true) {
+          link.element.setForegroundColor(link.startOffset, link.endOffsetInclusive+1, '#FF0000')
+          continue
+        }
+
+        // Otherwise, append the link to the footnote
 
         // eliminate trailing spaces
         while (paragraph.getText().endsWith(" ")) {
@@ -209,14 +231,21 @@ function makePermalink(url, api_key) {
   var options = {
     method: "post",
     contentType: "application/json",
+    muteHttpExceptions: true,
     payload: JSON.stringify(data),
   };
 
-  var response = JSON.parse(
-    UrlFetchApp.fetch(request_url, options).getContentText()
-  );
-  var permalink = "https://perma.cc/".concat(response["guid"]);
+  var response = UrlFetchApp.fetch(request_url, options)
 
+  var errorCode = response.getResponseCode()
+  if(errorCode >= 400 && errorCode < 500) {
+    return kErrorCode400
+  }
+
+  var responseJSON = JSON.parse(response.getContentText());
+  Logger.log(responseJSON)
+  var permalink = "https://perma.cc/".concat(responseJSON["guid"]);
+  Logger.log(permalink)
   return permalink;
 }
 
